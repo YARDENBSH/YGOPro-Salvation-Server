@@ -1,32 +1,8 @@
-/*jslint node:true, plusplus:true, bitwise : true, nomen:true*/
+/*jslint node:true, bitwise : true, nomen:true*/
 'use strict';
 
-var fs = require('fs');
-
-
-/**
- * Constructor for card objects.
- * @param    movelocation 'DECK'/'EXTRA' etc, in caps. 
- * @param   {Number} player       [[Description]]
- * @param   {Number} index        [[Description]]
- * @param   {Number} unique       [[Description]]
- * @returns {object}   a card
- */
-function makeCard(movelocation, player, index, unique, code) {
-    return {
-        type: 'card',
-        player: player,
-        location: movelocation,
-        id: code,
-        index: index,
-        position: 'FaceDown',
-        overlayindex: 0,
-        uid: unique,
-        originalcontroller: player,
-        counters: 0
-    };
-}
-
+var fs = require('fs'),
+    makeCard = require('makeCard');
 
 /**
  * Filters non cards from a collection of possible cards.
@@ -117,7 +93,7 @@ function sortByIndex(first, second) {
  */
 function shuffle(deck) {
     var j, x, index;
-    for (index = deck.length; index; index--) {
+    for (index = deck.length; index; index = index - 1) {
         j = Math.floor(Math.random() * index);
         x = deck[index - 1];
         deck[index - 1] = deck[j];
@@ -179,6 +155,22 @@ function hideHand(view) {
 }
 
 /**
+ * The way the stack of cards is setup it requires a pointer to edit it.
+ * @param {Number} provide a unique idenifier
+ * @returns {Number} index of that unique identifier in the stack.
+ */
+function uidLookup(stack, uid) {
+    var result;
+    stack.some(function (card, index) {
+        if (card.uid === uid) {
+            result = index;
+            return true;
+        }
+    });
+    return result;
+}
+
+/**
  * Initiation of a single independent state intance... I guess this is a class of sorts.
  * @param {function} callback function(view, internalState){}; called each time the stack is updated. 
  * @returns {object} State instance
@@ -190,8 +182,8 @@ function init(callback) {
     if (typeof callback !== 'function') {
         callback = function (view, internalState) {};
     }
-
     var stack = [],
+        db = [],
         names = ['', ''],
         lock = [false, false],
         round = [],
@@ -224,21 +216,7 @@ function init(callback) {
         names[slot] = username;
     }
 
-    /**
-     * The way the stack of cards is setup it requires a pointer to edit it.
-     * @param {Number} provide a unique idenifier
-     * @returns {Number} index of that unique identifier in the stack.
-     */
-    function uidLookup(uid) {
-        var result;
-        stack.some(function (card, index) {
-            if (card.uid === uid) {
-                result = index;
-                return true;
-            }
-        });
-        return result;
-    }
+
 
     /**
      * Returns info on a card, or rather a single card.
@@ -388,7 +366,7 @@ function init(callback) {
         zone.sort(sortByIndex);
 
         zone.forEach(function (card, index) {
-            pointer = uidLookup(card.uid);
+            pointer = uidLookup(stack, card.uid);
             stack[pointer].index = index;
         });
 
@@ -399,7 +377,7 @@ function init(callback) {
     function setState(player, clocation, index, moveplayer, movelocation, moveindex, moveposition, overlayindex, uid) {
         console.log('set:', player, clocation, index, moveplayer, movelocation, moveindex, moveposition, overlayindex, uid);
         var target = queryCard(player, clocation, index, 0, uid),
-            pointer = uidLookup(target.uid),
+            pointer = uidLookup(stack, target.uid),
             zone;
 
         if (movelocation === 'GRAVE' || movelocation === 'REMOVED') {
@@ -434,7 +412,7 @@ function init(callback) {
      * @param {NUmber code              
      */
     function makeNewCard(currentLocation, currentController, currentSequence, position, code, index) {
-        stack.push(makeCard(currentLocation, currentController, currentSequence, stack.length, code));
+        stack.push(makeCard(db, currentLocation, currentController, currentSequence, stack.length, code));
         stack[stack.length - 1].position = position;
         stack[stack.length - 1].index = index;
         state.added = stack[stack.length - 1];
@@ -448,7 +426,7 @@ function init(callback) {
      */
     function removeCard(uid) {
         var target = queryCard(undefined, undefined, undefined, 0, uid),
-            pointer = uidLookup(target.uid);
+            pointer = uidLookup(stack, target.uid);
 
         delete stack[pointer];
         state.removed = uid;
@@ -461,9 +439,9 @@ function init(callback) {
      */
     function addCounter(uid) {
         var target = queryCard(undefined, undefined, undefined, 0, uid),
-            pointer = uidLookup(target.uid);
+            pointer = uidLookup(stack, target.uid);
 
-        stack[pointer].counters++;
+        stack[pointer].counters = stack[pointer].counters + 1;
         callback(generateView(), stack);
     }
 
@@ -473,9 +451,9 @@ function init(callback) {
      */
     function removeCounter(uid) {
         var target = queryCard(undefined, undefined, undefined, 0, uid),
-            pointer = uidLookup(target.uid);
+            pointer = uidLookup(stack, target.uid);
 
-        stack[pointer].counters--;
+        stack[pointer].counters = stack[pointer].counters - 1;
         callback(generateView(), stack);
     }
 
@@ -494,12 +472,12 @@ function init(callback) {
             pointer,
             deck;
 
-        for (i = 0; i < numberOfCards; i++) {
+        for (i = 0; i < numberOfCards; i = i + 1) {
             deck = filterlocation(filterPlayer(stack, player), 'DECK');
             topcard = deck[deck.length - 1];
             setState(topcard.player, 'DECK', topcard.index, player, 'HAND', currenthand + i, 'FaceUp', 0, topcard.uid);
             target = queryCard(player, 'HAND', (currenthand + i), 0);
-            pointer = uidLookup(target.uid);
+            pointer = uidLookup(stack, target.uid);
             //stack[pointer].id = cards[i].Code;
         }
         if (username) {
@@ -515,11 +493,11 @@ function init(callback) {
             i,
             pointer;
 
-        for (i = 0; i < numberOfCards; i++) {
+        for (i = 0; i < numberOfCards; i = i + 1) {
             topcard = filterlocation(filterPlayer(stack, player), 'DECK').length - 1;
             setState(player, 'DECK', topcard, player, 'EXCAVATED', currenthand + i, 'FaceDown', 0);
             target = queryCard(player, 'EXCAVATED', (currenthand + i), 0);
-            pointer = uidLookup(target.uid);
+            pointer = uidLookup(stack, target.uid);
             //stack[pointer].id = cards[i].Code;
         }
         callback(generateView(), stack);
@@ -537,7 +515,7 @@ function init(callback) {
             i,
             pointer;
 
-        for (i = 0; i < numberOfCards; i++) {
+        for (i = 0; i < numberOfCards; i = i + 1) {
             topcard = filterlocation(filterPlayer(stack, player), 'DECK').length - 1;
             setState(player, 'DECK', topcard, player, 'GRAVE', currentgrave, 'FaceUp', 0);
         }
@@ -556,7 +534,7 @@ function init(callback) {
             i,
             pointer;
 
-        for (i = 0; i < numberOfCards; i++) {
+        for (i = 0; i < numberOfCards; i = i + 1) {
             topcard = filterlocation(filterPlayer(stack, player), 'DECK').length - 1;
             setState(player, 'DECK', topcard, player, 'REMOVED', currentgrave, 'FaceUp', 0);
         }
@@ -575,7 +553,7 @@ function init(callback) {
             i,
             pointer;
 
-        for (i = 0; i < numberOfCards; i++) {
+        for (i = 0; i < numberOfCards; i = i + 1) {
             topcard = filterlocation(filterPlayer(stack, player), 'DECK').length - 1;
             setState(player, 'DECK', topcard, player, 'REMOVED', currentgrave, 'FaceDown', 0);
         }
@@ -897,8 +875,9 @@ function init(callback) {
     /**
      * Exposed method to initialize the field; You only run this once.
      */
-    function startDuel(player1, player2, manual) {
+    function startDuel(database, player1, player2, manual) {
         stack = [];
+        db = database;
         if (!lock[0] && !lock[1]) {
             return;
         }
@@ -915,17 +894,17 @@ function init(callback) {
         };
 
         player1.main.forEach(function (card, index) {
-            stack.push(makeCard('DECK', 0, index, stack.length, card));
+            stack.push(makeCard(database, 'DECK', 0, index, stack.length, card));
         });
         player2.main.forEach(function (card, index) {
-            stack.push(makeCard('DECK', 1, index, stack.length, card));
+            stack.push(makeCard(database, 'DECK', 1, index, stack.length, card));
         });
 
         player1.extra.forEach(function (card, index) {
-            stack.push(makeCard('EXTRA', 0, index, stack.length, card));
+            stack.push(makeCard(database, 'EXTRA', 0, index, stack.length, card));
         });
         player2.extra.forEach(function (card, index) {
-            stack.push(makeCard('EXTRA', 1, index, stack.length, card));
+            stack.push(makeCard(database, 'EXTRA', 1, index, stack.length, card));
         });
         if (manual) {
             state.duelistChat.push('<pre>Commands:</pre>');
@@ -967,7 +946,7 @@ function init(callback) {
      * Shifts the game to the start of the next turn and shifts the active player.
      */
     function nextTurn() {
-        state.turn++;
+        state.turn = state.turn + 1;
         state.phase = 0;
         state.turnOfPlayer = (state.turnOfPlayer === 0) ? 1 : 0;
         callback(generateView(), stack);
@@ -1091,7 +1070,7 @@ function init(callback) {
     function offsetZone(player, zone) {
         stack.forEach(function (card, index) {
             if (card.player === player && card.location === zone) {
-                card.index++;
+                card.index = card.index + 1;
             }
         });
     }
@@ -1116,6 +1095,14 @@ function init(callback) {
 
     //expose public functions.
     return {
+        actionQueue: [],
+        drawPhaseActionQueue: [],
+        standbyPhaseActionQueue: [],
+        mainPhase1ActionQueue: [],
+        battlePhaseActionQueue: [],
+        damageCalculationActionQueue: [],
+        mainPhase2ActionQueue: [],
+        endPhaseActionQueue: [],
         startSide: startSide,
         startDuel: startDuel,
         setState: setState,

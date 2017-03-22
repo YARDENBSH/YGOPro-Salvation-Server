@@ -2,7 +2,6 @@
 'use strict';
 
 var validateDeck = require('./validate-Deck'),
-    configParser = require('./ConfigParser.js'),
     http = require('http'),
     https = require('https'),
     path = require('path'),
@@ -19,8 +18,8 @@ module.exports = function (wss) {
 
     var databases = {},
         realgames = [],
-        stateSystem = require('./ygojs-core.js'),
-        configParser = require('./configparser.js'),
+        stateSystem = {},
+        core = require('./ygojs-core.js'),
         games = {},
         states = {},
         log = {};
@@ -197,7 +196,7 @@ module.exports = function (wss) {
             generated = randomString(12);
             games[generated] = newGame(message);
             log[generated] = [];
-            stateSystem[generated] = stateSystem(socketBinding(generated));
+            stateSystem[generated] = core(databases, socketBinding(generated));
             games[generated].player[0].name = message.name;
             stateSystem[generated].players[0] = socket;
             stateSystem[generated].setNames(socket.username, 0);
@@ -351,7 +350,7 @@ module.exports = function (wss) {
             if (socket.slot !== undefined) {
                 player1 = stateSystem[activeduel].decks[0];
                 player2 = stateSystem[activeduel].decks[1];
-                stateSystem[activeduel].startDuel(player1, player2, true);
+                stateSystem[activeduel].startDuel(banlist[games[activeduel].banlist], player1, player2, true);
                 games[activeduel].started = true;
                 wss.broadcast(games);
             }

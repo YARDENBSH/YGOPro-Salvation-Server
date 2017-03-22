@@ -422,6 +422,67 @@ function doEndPhase(duel, callback) {
     return;
 }
 
+
+
+
+/**
+ * Start cycle through phases of the game
+ * @param {Object} duel  Engine Instance
+ */
+function setupTurn(duel) {
+
+    // this function can only run once per engine instance.
+    if (duel.engineActive) {
+        return;
+    }
+
+    // lock out this function from running again.
+    duel.engineActive = true;
+    duel.actionQueue = [];
+
+
+    // main phase 2, and battle phase skips to be determined by other mechanisms that reset each turn.
+    duel.skipmainphase2 = false;
+    duel.skipbattlephase = false;
+
+
+    // queue up each of the game phase.
+    // each phase is "done" even if skipped by a card effect.
+    // each phase processing function has a way of handling skips.
+
+    var actionQueue = duel.actionQueue;
+
+    actionQueue.push({
+        command: doDrawPhase,
+        params: [duel]
+    });
+    actionQueue.push({
+        command: doStandbyPhase,
+        params: [duel]
+    });
+    actionQueue.push({
+        command: doMainPhase1,
+        params: [duel]
+    });
+    actionQueue.push({
+        command: doBattlePhase,
+        params: [duel]
+    });
+    actionQueue.push({
+        command: doMainPhase2,
+        params: [duel]
+    });
+    actionQueue.push({
+        command: doDrawPhase,
+        params: [duel]
+    });
+
+    processActionQueue(actionQueue, function () {
+        setTimeout(setupTurn);
+    });
+}
+
+
 /**
  * Initiate the duel
  * @param {object} duel   Engine instance (ygojs-core.js)
@@ -446,47 +507,8 @@ function init(duel, params) {
     });
 
 
-    function setupTurn() {
 
-        // main phase 2, and battle phase skips to be determined by other mechanisms that reset each turn.
-        duel.skipmainphase2 = false;
-        duel.skipbattlephase = false;
-
-
-        // queue up each of the game phase.
-        // each phase is "done" even if skipped by a card effect.
-        // each phase processing function has a way of handling skips.
-
-        actionQueue.push({
-            command: doDrawPhase,
-            params: [duel]
-        });
-        actionQueue.push({
-            command: doStandbyPhase,
-            params: [duel]
-        });
-        actionQueue.push({
-            command: doMainPhase1,
-            params: [duel]
-        });
-        actionQueue.push({
-            command: doBattlePhase,
-            params: [duel]
-        });
-        actionQueue.push({
-            command: doMainPhase2,
-            params: [duel]
-        });
-        actionQueue.push({
-            command: doDrawPhase,
-            params: [duel]
-        });
-
-        processActionQueue(actionQueue, function () {
-            setTimeout(setupTurn);
-        });
-    }
-    setupTurn();
+    setupTurn(duel, actionQueue);
 }
 module.exports = {
     init: init
