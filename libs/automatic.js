@@ -11,7 +11,9 @@ var DRAW_PHASE = 0,
     MAIN_PHASE_2 = 4,
     END_PHASE = 5;
 
-var waterfall = require('async-waterfall');
+var waterfall = require('async-waterfall'),
+    hotload = require('hotload'),
+    aux = hotload('../scripts/utilities');
 /*
     Action Object
     {
@@ -483,6 +485,10 @@ function setupTurn(duel) {
 }
 
 
+function generic() {
+    return undefined;
+}
+
 /**
  * Initiate the duel
  * @param {object} duel   Engine instance (ygojs-core.js)
@@ -491,7 +497,30 @@ function setupTurn(duel) {
 function init(duel, params) {
     var actionQueue = [];
 
-    // load all cards
+    duel.stack.forEach(function (card) {
+        try {
+            card.script = hotload('../script/' + card.id + '.js');
+            card.effectList = [];
+            card.registerEffect = function (effect) {
+                card.effectList.push(effect);
+            };
+            card.script.initial_effect(card, duel);
+            card.runEffects = function () {
+                card.effectList.forEach(function (effect) {
+                    try {
+                        effect.operation();
+                    } catch (effectError) {
+                        console.log(effect.name + 'Failed', effectError);
+                    }
+                });
+            };
+        } catch (couldNotLoadCard) {
+            card.runEffects = generic;
+            card.script = {
+                initial_effect: generic
+            };
+        }
+    });
 
 
     // Set the starting Life Points

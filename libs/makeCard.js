@@ -1,3 +1,17 @@
+function getCardObject(id, database) {
+    var result = {};
+    database.some(function (card, index) {
+        if (id === card.id) {
+            result = card;
+            return true;
+        } else {
+            return false;
+        }
+    });
+
+    return result;
+}
+
 /**
  * Constructor for card objects.
  * @param    movelocation 'DECK'/'EXTRA' etc, in caps. 
@@ -6,8 +20,8 @@
  * @param   {Number} unique       [[Description]]
  * @returns {object}   a card
  */
-function makeCard(movelocation, player, index, unique, code) {
-    return {
+function makeCard(database, movelocation, player, index, unique, code) {
+    var baseCard = {
         type: 'card',
         player: player,
         location: movelocation,
@@ -19,6 +33,9 @@ function makeCard(movelocation, player, index, unique, code) {
         originalcontroller: player,
         counters: 0
     };
+    Object.assign(baseCard, getCardObject(code, database));
+
+    return baseCard;
 }
 
 modules.exports = makeCard;
