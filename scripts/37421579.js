@@ -1,14 +1,14 @@
 /*jslint node : true*/
 'use strict';
 
-// Flame Swordsman
+// Charubin the Fire Knight
 module.exports = {
     initial_effect: function initial_effect(card, duel, aux) {
 
         var effect = {},
             FUSION_MATERIALS = [
-                34460851, // Flame Manipulator
-                44287299 // Masaki the Legendary Swordsman
+                36121917, // Monster Egg
+                96851799 // Hinotama Soul
             ];
         effect = aux.fusionMonster(card, effect, FUSION_MATERIALS);
 
@@ -16,5 +16,4 @@ module.exports = {
 
         return card;
     }
-
 };
