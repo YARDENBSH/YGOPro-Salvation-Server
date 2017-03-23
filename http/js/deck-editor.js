@@ -110,8 +110,11 @@ var oldDB = '[]';
 try {
     oldDB = JSON.parse(localStorage.compiledDB);
 } catch (error) {
+    printError('Unable to load cached Database.');
     oldDB = [];
 }
+
+console.log(oldDB);
 
 var databaseSystem = (function () {
     'use strict';
@@ -123,7 +126,8 @@ var databaseSystem = (function () {
         },
         activedbs = '',
         setcodes,
-        status = false;
+        status = false,
+        completedatabase = [];
 
     function getBanlist() {
         return banlist[activeBanlist].bannedCards;
@@ -231,14 +235,6 @@ var databaseSystem = (function () {
      * @returns {Array[Object]} array of cards.
      */
     function getDB() {
-        setTimeout(function () {
-            try {
-                localStorage.compiledDB = JSON.stringify(database);
-            } catch (e) {
-                printError('Failed to store cache of database!');
-                printError(e);
-            }
-        }, 1000);
 
         return docardStackSort(database);
     }
@@ -283,18 +279,23 @@ var databaseSystem = (function () {
 
     $.getJSON('/manifest/manifest_0-en-OCGTCG.json', function (data) {
         dbs.OCGTCG = data;
+        completedatabase = dbs.OCGTCG;
+
         setDatabase(['OCGTCG']);
+        setTimeout(function () {
+            try {
+                localStorage.compiledDB = JSON.stringify(data);
+            } catch (e) {
+                printError('Failed to store cache of database!');
+                printError(e);
+            }
+        }, 1000);
     });
 
-    $.getJSON('/manifest/manifest_1-Anime.json', function (data) {
-        dbs.Anime = data;
-    });
+
     $.getJSON('/manifest/manifest_3-Goats.json', function (data) {
 
         dbs.Goats = data;
-    });
-    $.getJSON('/manifest/manifest_4-World-Championship.json', function (data) {
-        dbs.Championship = data;
     });
     //    $.getJSON('/manifest/manifest_Z-CWA.json', function (data) {
     //        dbs.CWA = data;
@@ -328,8 +329,10 @@ var databaseSystem = (function () {
     });
 
     function directLookup(id) {
-        var result = {};
-        database.some(function (card, index) {
+        var result = {},
+            dbuse = (dbs.OCGTCG.length) ? dbs.OCGTCG : oldDB;
+
+        dbuse.some(function (card, index) {
             if (id === card.id) {
                 result = card;
                 result.date = new Date(result.date).getTime();
@@ -1057,7 +1060,6 @@ var deckEditor = (function () {
             friends: friends,
             username: localStorage.nickname
         };
-        console.log(message);
         primus.write(message);
     }
 
@@ -1072,7 +1074,6 @@ var deckEditor = (function () {
     function expandDeck(card, index, deck) {
 
         var output = databaseSystem.directLookup(card.id);
-        console.log(output, card.id);
         return output;
     }
 
@@ -1082,7 +1083,6 @@ var deckEditor = (function () {
     }
 
     function labelExtra(card, index, array, thing) {
-        console.log(card, index, array);
         card.zone = 'extra';
         return card;
     }
@@ -1110,7 +1110,6 @@ var deckEditor = (function () {
             expanded.side = expanded.side.map(labelMain);
             return expanded;
         });
-        console.log(decks, output);
         return output;
     }
 
@@ -1118,7 +1117,6 @@ var deckEditor = (function () {
 
     function loadDecks(decks) {
         usersDecks = expandDecks(decks) || [makeNewDeck('New Deck')];
-        console.log(usersDecks);
         $('.deckSelect,  #lobbycurrentdeck select').html('');
         usersDecks.forEach(function (deck, index) {
             $('.deckSelect, #lobbycurrentdeck select').append('<option value="' + index + '">' + deck.name + '</option>');
@@ -1320,7 +1318,7 @@ var deckEditor = (function () {
                 }
             });
         } catch (er) {
-            console.log(er);
+            printError(er);
         }
         return originalValues;
     }
@@ -1443,7 +1441,7 @@ function deckeditonclick(index, zone) {
     return;
 }
 
-$('.descInput, .nameInput').on('input', deckEditor.doNewSearch);
+//$('.descInput, .nameInput').on('input', deckEditor.doNewSearch);
 $('.typeSelect, .monsterCardSelect, .monsterTypeSelect, .spellSelect, .trapSelect, .attributeSelect, .raceSelect, .setcodeSelect, .forbiddenLimitedSelect').on('change', deckEditor.doNewSearch);
 
 $('.atkInput, .defInput, .levelInput, .scaleInput').on('change', deckEditor.doNewSearch);
