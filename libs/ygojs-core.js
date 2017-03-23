@@ -2,7 +2,7 @@
 'use strict';
 
 var fs = require('fs'),
-    makeCard = require('makeCard');
+    makeCard = require('./makeCard.js');
 
 /**
  * Filters non cards from a collection of possible cards.

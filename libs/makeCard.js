@@ -38,4 +38,4 @@ function makeCard(database, movelocation, player, index, unique, code) {
     return baseCard;
 }
 
-modules.exports = makeCard;
+module.exports = makeCard;
