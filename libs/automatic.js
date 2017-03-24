@@ -14,6 +14,69 @@ var DRAW_PHASE = 0,
 var waterfall = require('async-waterfall'),
     hotload = require('hotload'),
     aux = hotload('../scripts/utilities');
+
+
+/**
+ * Get cards that have a specific effect type.
+ * @param   {Object}   duel       Engine Instance
+ * @param   {String} effectType Text String to look for
+ * @returns {Array} Array of card
+ */
+function getForEffects(duel, effectType) {
+    return duel.stack.filter(function (card) {
+        var validEffectList = card.effectList.some(function (effect) {
+            return effect.setType === effectType;
+        });
+        return validEffectList.length;
+    });
+}
+
+/**
+ * Get cards that have a specific effect category.
+ * @param   {Object}   duel           Engine Instance
+ * @param   {String} effectCategory Text String to look for
+ * @returns {Array} Array of card
+ */
+function getForEffects(duel, effectCategory) {
+    return duel.stack.filter(function (card) {
+        var validEffectList = card.effectList.some(function (effect) {
+            return effect.SetCategory === effectCategory;
+        });
+        return validEffectList.length;
+    });
+}
+
+/**
+ * Get cards that have a specific effect code.
+ * @param   {Object}   duel       Engine Instance
+ * @param   {String} effectCode Text String to look for
+ * @returns {Array} Array of card
+ */
+function getForEffects(duel, effectCode) {
+    return duel.stack.filter(function (card) {
+        var validEffectList = card.effectList.some(function (effect) {
+            return effect.SetCode === effectCode;
+        });
+        return validEffectList.length;
+    });
+}
+
+/**
+ * Get cards that have a specific effect code.
+ * @param   {Object}   duel       Engine Instance
+ * @param   {String} effectProperty Text String to look for
+ * @returns {Array} Array of card
+ */
+function getForEffects(duel, effectProperty) {
+    return duel.stack.filter(function (card) {
+        var validEffectList = card.effectList.some(function (effect) {
+            return effect.SetProperty === effectProperty;
+        });
+        return validEffectList.length;
+    });
+}
+
+
 /*
     Action Object
     {
@@ -27,6 +90,7 @@ var waterfall = require('async-waterfall'),
     When sending a question to the user, make sure to set a duel.responseEngine.once listener with a
     unique id to catch the response. Do not use `.on`.
 */
+
 
 /**
  * Process a queue of actions (as defined by above Action Object).
@@ -135,6 +199,25 @@ function doStandbyPhase(duel, callback) {
     return;
 }
 
+function getNormalSummons(duel) {
+    if (!duel.normalSummonedThisTurn) {
+        var state = duel.getState(),
+            player = state.turnOfPlayer,
+            ownedCards = aux.filterPlayer(player),
+            inHand = aux.filterlocation(ownedCards, 'HAND'),
+            monsters = aux.filterType(inHand, 'MONSTER');
+
+        return inHand.filter(function (card) {
+            var validEffectList = card.effectList.some(function (effect) {
+                return effect.SetCode !== 'EFFECT_CANNOT_SUMMON';
+            });
+            return validEffectList.length;
+        });
+    } else {
+        return [];
+    }
+
+}
 /**
  * Generate action list for main phases.
  * @param   {Object} duel Engine instance
@@ -142,9 +225,7 @@ function doStandbyPhase(duel, callback) {
  */
 function getMainPhaseActions(duel) {
     return {
-        normalsummonable: duel.query.getGroup({
-            normalSummonable: true
-        }),
+        normalsummonable: getNormalSummons(duel),
         specialsummonable: duel.query.getGroup({
             specialsummonable: true
         }),
@@ -203,8 +284,8 @@ function doMainPhase1(duel, callback) {
                 pendulumSummon: state.pendulumnSummonAvaliable,
                 player: state.turnOfPlayer
 
-            }, function (error, answer) {
-                switch (answer.action) {
+            }, function (error, message) {
+                switch (message.action) {
                 case 'battlephase':
                     callback();
                     break;
@@ -212,6 +293,17 @@ function doMainPhase1(duel, callback) {
                     duel.skipbattlephase = true;
                     duel.skipmainphase2 = true;
                     callback();
+                    break;
+                case 'normalsummon':
+                    duel.question({
+                        questionType: 'openMonsterSlots'
+                    }, function (error, openMonsterSlots) {
+                        message.index = openMonsterSlots;
+                        // Really need to fix
+                        duel.setState(message);
+                        duel.normalSummonedThisTurn = true;
+                    });
+
                     break;
                 default:
                     askUserNextAction();
@@ -446,6 +538,7 @@ function setupTurn(duel) {
     // main phase 2, and battle phase skips to be determined by other mechanisms that reset each turn.
     duel.skipmainphase2 = false;
     duel.skipbattlephase = false;
+    duel.normalSummonedThisTurn = false;
 
 
     // queue up each of the game phase.

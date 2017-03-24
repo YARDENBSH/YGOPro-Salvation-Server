@@ -1,3 +1,5 @@
+'use strict';
+
 function getCardObject(id, database) {
     var result = {};
     database.some(function (card, index) {
@@ -31,7 +33,8 @@ function makeCard(database, movelocation, player, index, unique, code) {
         overlayindex: 0,
         uid: unique,
         originalcontroller: player,
-        counters: 0
+        counters: 0,
+        effectList: []
     };
     Object.assign(baseCard, getCardObject(code, database));
 

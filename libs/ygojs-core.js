@@ -2,88 +2,10 @@
 'use strict';
 
 var fs = require('fs'),
-    makeCard = require('./makeCard.js');
-
-/**
- * Filters non cards from a collection of possible cards.
- * @param   {Array} a stack of cards which may have overlay units attached to them.
- * @returns {Array} a stack of cards, devoid of overlay units.
- */
-function filterIsCard(stack) {
-    return stack.filter(function (item) {
-        return item.type === 'card';
-    });
-}
-
-/**
- * Filters out cards based on player.
- * @param   {Array} Array a stack of cards.
- * @param {Number} player 0 or 1
- * @returns {Array} a stack of cards that belong to only one specified player. 
- */
-function filterPlayer(stack, player) {
-    return stack.filter(function (item) {
-        return item.player === player;
-    });
-}
-
-/**
- * Filters out cards based on zone.
- * @param   {Array} stack a stack of cards.
- * @param {String} location
- * @returns {Array} a stack of cards that are in only one location/zone.
- */
-function filterlocation(stack, location) {
-    return stack.filter(function (item) {
-        return item.location === location;
-    });
-}
-
-/**
- * Filters out cards based on index.
- * @param   {Array}  a stack of cards.
- * @param {Number} index
- * @returns {Array} a stack of cards that are in only one index
- */
-function filterIndex(stack, index) {
-    return stack.filter(function (item) {
-        return item.index === index;
-    });
-}
-/**
- * Filters out cards based on if they are overlay units or not.
- * @param {Array} stack a stack of cards attached to a single monster as overlay units.
- * @param {Number} overlayindex
- * @returns {Array} a single card
- */
-function filterOverlyIndex(stack, overlayindex) {
-    return stack.filter(function (item) {
-        return item.overlayindex === overlayindex;
-    });
-}
-
-/**
- * Filters out cards based on if they are a specific UID
- * @param {Array} stack a stack of cards attached to a single monster as overlay units.
- * @param {Number} uid
- * @returns {boolean} if a card is that UID
- */
-function filterUID(stack, uid) {
-    return stack.filter(function (item) {
-        return item.uid === uid;
-    });
-}
+    makeCard = require('./makeCard.js'),
+    query = require('../scripts/utilities');
 
 
-/**
- * Sort function, sorts by card index
- * @param   {object}   first  card object
- * @param   {object}   second card object
- * @returns {boolean} 
- */
-function sortByIndex(first, second) {
-    return first.index - second.index;
-}
 
 
 
@@ -228,13 +150,13 @@ function init(callback) {
      */
     function queryCard(player, clocation, index, overlayindex, uid) {
         if (uid) {
-            return filterUID(stack, uid)[0];
+            return query.filterUID(stack, uid)[0];
         }
-        return filterOverlyIndex(filterIndex(filterlocation(filterPlayer(stack, player), clocation), index), overlayindex)[0];
+        return query.filterOverlyIndex(query.filterIndex(query.filterlocation(query.filterPlayer(stack, player), clocation), index), overlayindex)[0];
     }
 
     function findUIDCollection(uid) {
-        return filterUID(stack, uid);
+        return query.filterUID(stack, uid);
     }
 
     /**
@@ -243,15 +165,15 @@ function init(callback) {
      * @returns {object} all the cards the given player can see on their side of the field.
      */
     function generateSinglePlayerView(player) {
-        var playersCards = filterPlayer(stack, player),
-            deck = filterlocation(playersCards, 'DECK'),
-            hand = filterlocation(playersCards, 'HAND'),
-            grave = filterlocation(playersCards, 'GRAVE'),
-            extra = filterOverlyIndex(filterlocation(playersCards, 'EXTRA'), 0),
-            removed = filterlocation(playersCards, 'REMOVED'),
-            spellzone = filterlocation(playersCards, 'SPELLZONE'),
-            monsterzone = filterlocation(playersCards, 'MONSTERZONE'),
-            excavated = filterlocation(playersCards, 'EXCAVATED');
+        var playersCards = query.filterPlayer(stack, player),
+            deck = query.filterlocation(playersCards, 'DECK'),
+            hand = query.filterlocation(playersCards, 'HAND'),
+            grave = query.filterlocation(playersCards, 'GRAVE'),
+            extra = query.filterOverlyIndex(query.filterlocation(playersCards, 'EXTRA'), 0),
+            removed = query.filterlocation(playersCards, 'REMOVED'),
+            spellzone = query.filterlocation(playersCards, 'SPELLZONE'),
+            monsterzone = query.filterlocation(playersCards, 'MONSTERZONE'),
+            excavated = query.filterlocation(playersCards, 'EXCAVATED');
 
         return {
             DECK: hideViewOfZone(deck),
@@ -271,15 +193,15 @@ function init(callback) {
      * @returns {object} all the cards the given spectator/opponent can see on that side of the field.
      */
     function generateSinglePlayerSpectatorView(player) {
-        var playersCards = filterPlayer(stack, player),
-            deck = filterlocation(playersCards, 'DECK'),
-            hand = filterlocation(playersCards, 'HAND'),
-            grave = filterlocation(playersCards, 'GRAVE'),
-            extra = filterOverlyIndex(filterlocation(playersCards, 'EXTRA'), 0),
-            removed = filterlocation(playersCards, 'REMOVED'),
-            spellzone = filterlocation(playersCards, 'SPELLZONE'),
-            monsterzone = filterlocation(playersCards, 'MONSTERZONE'),
-            excavated = filterlocation(playersCards, 'EXCAVATED');
+        var playersCards = query.filterPlayer(stack, player),
+            deck = query.filterlocation(playersCards, 'DECK'),
+            hand = query.filterlocation(playersCards, 'HAND'),
+            grave = query.filterlocation(playersCards, 'GRAVE'),
+            extra = query.filterOverlyIndex(query.filterlocation(playersCards, 'EXTRA'), 0),
+            removed = query.filterlocation(playersCards, 'REMOVED'),
+            spellzone = query.filterlocation(playersCards, 'SPELLZONE'),
+            monsterzone = query.filterlocation(playersCards, 'MONSTERZONE'),
+            excavated = query.filterlocation(playersCards, 'EXCAVATED');
 
         return {
             DECK: hideViewOfZone(deck),
@@ -346,7 +268,7 @@ function init(callback) {
     function reIndex(player, location) {
         //again YGOPro doesnt manage data properly... and doesnt send the index update for the movement command.
         //that or Im somehow missing it in moveCard().
-        var zone = filterlocation(filterPlayer(stack, player), location),
+        var zone = query.filterlocation(query.filterPlayer(stack, player), location),
             pointer;
 
         if (location === 'EXTRA') {
@@ -363,14 +285,14 @@ function init(callback) {
             });
         }
 
-        zone.sort(sortByIndex);
+        zone.sort(query.sortByIndex);
 
         zone.forEach(function (card, index) {
             pointer = uidLookup(stack, card.uid);
             stack[pointer].index = index;
         });
 
-        stack.sort(sortByIndex);
+        stack.sort(query.sortByIndex);
     }
 
     //finds a card, then moves it elsewhere.
@@ -465,7 +387,7 @@ function init(callback) {
      * @param {Array} cards         array of objects representing each of those drawn cards.
      */
     function drawCard(player, numberOfCards, username) {
-        var currenthand = filterlocation(filterPlayer(stack, player), 'HAND').length,
+        var currenthand = query.filterlocation(query.filterPlayer(stack, player), 'HAND').length,
             topcard,
             target,
             i,
@@ -473,7 +395,7 @@ function init(callback) {
             deck;
 
         for (i = 0; i < numberOfCards; i = i + 1) {
-            deck = filterlocation(filterPlayer(stack, player), 'DECK');
+            deck = query.filterlocation(query.filterPlayer(stack, player), 'DECK');
             topcard = deck[deck.length - 1];
             setState(topcard.player, 'DECK', topcard.index, player, 'HAND', currenthand + i, 'FaceUp', 0, topcard.uid);
             target = queryCard(player, 'HAND', (currenthand + i), 0);
@@ -487,14 +409,14 @@ function init(callback) {
     }
 
     function excavateCard(player, numberOfCards, cards) {
-        var currenthand = filterlocation(filterPlayer(stack, player), 'EXCAVATED').length,
+        var currenthand = query.filterlocation(query.filterPlayer(stack, player), 'EXCAVATED').length,
             topcard,
             target,
             i,
             pointer;
 
         for (i = 0; i < numberOfCards; i = i + 1) {
-            topcard = filterlocation(filterPlayer(stack, player), 'DECK').length - 1;
+            topcard = query.filterlocation(query.filterPlayer(stack, player), 'DECK').length - 1;
             setState(player, 'DECK', topcard, player, 'EXCAVATED', currenthand + i, 'FaceDown', 0);
             target = queryCard(player, 'EXCAVATED', (currenthand + i), 0);
             pointer = uidLookup(stack, target.uid);
@@ -509,14 +431,14 @@ function init(callback) {
      * @param {Number} numberOfCards number of cards milled
      */
     function millCard(player, numberOfCards) {
-        var currentgrave = filterlocation(filterPlayer(stack, player), 'GRAVE').length,
+        var currentgrave = query.filterlocation(query.filterPlayer(stack, player), 'GRAVE').length,
             topcard,
             target,
             i,
             pointer;
 
         for (i = 0; i < numberOfCards; i = i + 1) {
-            topcard = filterlocation(filterPlayer(stack, player), 'DECK').length - 1;
+            topcard = query.filterlocation(query.filterPlayer(stack, player), 'DECK').length - 1;
             setState(player, 'DECK', topcard, player, 'GRAVE', currentgrave, 'FaceUp', 0);
         }
         callback(generateView(), stack);
@@ -528,14 +450,14 @@ function init(callback) {
      * @param {Number} numberOfCards number of cards milled
      */
     function millRemovedCard(player, numberOfCards) {
-        var currentgrave = filterlocation(filterPlayer(stack, player), 'REMOVED').length,
+        var currentgrave = query.filterlocation(query.filterPlayer(stack, player), 'REMOVED').length,
             topcard,
             target,
             i,
             pointer;
 
         for (i = 0; i < numberOfCards; i = i + 1) {
-            topcard = filterlocation(filterPlayer(stack, player), 'DECK').length - 1;
+            topcard = query.filterlocation(query.filterPlayer(stack, player), 'DECK').length - 1;
             setState(player, 'DECK', topcard, player, 'REMOVED', currentgrave, 'FaceUp', 0);
         }
         callback(generateView(), stack);
@@ -547,14 +469,14 @@ function init(callback) {
      * @param {Number} numberOfCards number of cards milled
      */
     function millRemovedCardFaceDown(player, numberOfCards) {
-        var currentgrave = filterlocation(filterPlayer(stack, player), 'REMOVED').length,
+        var currentgrave = query.filterlocation(query.filterPlayer(stack, player), 'REMOVED').length,
             topcard,
             target,
             i,
             pointer;
 
         for (i = 0; i < numberOfCards; i = i + 1) {
-            topcard = filterlocation(filterPlayer(stack, player), 'DECK').length - 1;
+            topcard = query.filterlocation(query.filterPlayer(stack, player), 'DECK').length - 1;
             setState(player, 'DECK', topcard, player, 'REMOVED', currentgrave, 'FaceDown', 0);
         }
         callback(generateView(), stack);
@@ -602,7 +524,7 @@ function init(callback) {
      * @param {number} player 
      */
     function revealTop(player) {
-        var deck = filterlocation(filterPlayer(stack, player), 'DECK'),
+        var deck = query.filterlocation(query.filterPlayer(stack, player), 'DECK'),
             reveal = deck[deck.length - 1];
 
         revealCallback([reveal], player, 'top');
@@ -614,7 +536,7 @@ function init(callback) {
      * @param {number} player 
      */
     function revealBottom(player) {
-        var deck = filterlocation(filterPlayer(stack, player), 'DECK'),
+        var deck = query.filterlocation(query.filterPlayer(stack, player), 'DECK'),
             reveal = deck[0];
 
         revealCallback([reveal], player, 'bottom');
@@ -625,7 +547,7 @@ function init(callback) {
      * @param {number} player 
      */
     function revealDeck(player) {
-        revealCallback(filterlocation(filterPlayer(stack, player), 'DECK').reverse(), player, 'deck');
+        revealCallback(query.filterlocation(query.filterPlayer(stack, player), 'DECK').reverse(), player, 'deck');
     }
 
     /**
@@ -633,7 +555,7 @@ function init(callback) {
      * @param {number} player 
      */
     function revealExtra(player) {
-        revealCallback(filterlocation(filterPlayer(stack, player), 'EXTRA'), player, 'extra');
+        revealCallback(query.filterlocation(query.filterPlayer(stack, player), 'EXTRA'), player, 'extra');
     }
 
     /**
@@ -641,7 +563,7 @@ function init(callback) {
      * @param {number} player 
      */
     function revealExcavated(player) {
-        revealCallback(filterlocation(filterPlayer(stack, player), 'EXCAVATED'), player, 'excavated');
+        revealCallback(query.filterlocation(query.filterPlayer(stack, player), 'EXCAVATED'), player, 'excavated');
     }
 
     /**
@@ -649,7 +571,7 @@ function init(callback) {
      * @param {number} player 
      */
     function revealHand(player) {
-        revealCallback(filterlocation(filterPlayer(stack, player), 'HAND'), player, 'hand');
+        revealCallback(query.filterlocation(query.filterPlayer(stack, player), 'HAND'), player, 'hand');
     }
 
     /**
@@ -662,7 +584,7 @@ function init(callback) {
         } else {
             state.duelistChat.push('<pre>' + username + ' is viewing your gaveyard.</pre>');
         }
-        var deck = filterlocation(filterPlayer(stack, player), 'GRAVE').sort(sortByIndex).reverse(),
+        var deck = query.filterlocation(query.filterPlayer(stack, player), 'GRAVE').sort(query.sortByIndex).reverse(),
             result = {
                 0: {},
                 1: {},
@@ -690,7 +612,7 @@ function init(callback) {
         } else {
             state.duelistChat.push('<pre>' + username + ' is viewing your banished pile.</pre>');
         }
-        var deck = filterlocation(filterPlayer(stack, player), 'REMOVED').reverse(), // its face up so its reversed.
+        var deck = query.filterlocation(query.filterPlayer(stack, player), 'REMOVED').reverse(), // its face up so its reversed.
             result = {
                 0: {},
                 1: {},
@@ -712,7 +634,7 @@ function init(callback) {
 
 
     function viewDeck(player, username) {
-        var deck = filterlocation(filterPlayer(stack, player), 'DECK').reverse(),
+        var deck = query.filterlocation(query.filterPlayer(stack, player), 'DECK').reverse(),
             result = {
                 0: {},
                 1: {},
@@ -732,7 +654,7 @@ function init(callback) {
     }
 
     function viewExtra(player, username) {
-        var deck = filterlocation(filterPlayer(stack, player), 'EXTRA'),
+        var deck = query.filterlocation(query.filterPlayer(stack, player), 'EXTRA'),
             result = {
                 0: {},
                 1: {},
@@ -759,7 +681,7 @@ function init(callback) {
      * @param {Number} player
      */
     function viewExcavated(player, username) {
-        var deck = filterlocation(filterPlayer(stack, player), 'EXCAVATED'),
+        var deck = query.filterlocation(query.filterPlayer(stack, player), 'EXCAVATED'),
             result = {
                 0: {},
                 1: {},
@@ -788,7 +710,7 @@ function init(callback) {
      * @param {Number} player
      */
     function viewXYZ(slot, index, player) {
-        var pile = filterIndex(filterlocation(filterPlayer(stack, player), 'MONSTERZONE'), index),
+        var pile = query.filterIndex(query.filterlocation(query.filterPlayer(stack, player), 'MONSTERZONE'), index),
             result = {
                 0: {},
                 1: {},
@@ -1001,8 +923,8 @@ function init(callback) {
     function shuffleDeck(player) {
         // Ids are reassigned to new GUIs 
 
-        var playersCards = filterPlayer(stack, player),
-            deck = filterlocation(playersCards, 'DECK'),
+        var playersCards = query.filterPlayer(stack, player),
+            deck = query.filterlocation(playersCards, 'DECK'),
             idCollection = [];
 
         deck.forEach(function (card) {
@@ -1022,8 +944,8 @@ function init(callback) {
     function shuffleHand(player) {
         // Ids are reassigned to new GUIs 
 
-        var playersCards = filterPlayer(stack, player),
-            hand = filterlocation(playersCards, 'HAND'),
+        var playersCards = query.filterPlayer(stack, player),
+            hand = query.filterlocation(playersCards, 'HAND'),
             idCollection = [];
 
         hand.forEach(function (card) {
@@ -1044,8 +966,8 @@ function init(callback) {
      * @param {number} player
      */
     function flipDeck(player) {
-        var playersCards = filterPlayer(stack, player),
-            deck = filterlocation(playersCards, 'DECK'),
+        var playersCards = query.filterPlayer(stack, player),
+            deck = query.filterlocation(playersCards, 'DECK'),
             idCollection = [];
 
         // copy the ids to a sperate place

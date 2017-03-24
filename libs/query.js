@@ -1,42 +1,4 @@
-/*jslint node : true, bitwise:true*/
 'use strict';
-
-
-function cardIs(card, query) {
-    if (query === "MONSTER" && (card.race !== 0 || card.level !== 0 || card.attribute !== 0)) {
-        return true;
-    }
-    if (query === "MONSTER") {
-        return (card.type & 1) === 1;
-    }
-    if (query === "SPELL") {
-        return (card.type & 2) === 2;
-    }
-    if (query === "TRAP") {
-        return (card.type & 4) === 4;
-    }
-    if (query === "FUSION") {
-        return (card.type & 64) === 64;
-    }
-    if (query === "RITUAL") {
-        return (card.type & 128) === 128;
-    }
-    if (query === "SYNCHRO") {
-        return (card.type & 8192) === 8192;
-    }
-    if (query === "XYZ") {
-        return (card.type & 8388608) === 8388608;
-    }
-    if (query === "LINK") {
-        return (card.type & 33554432) === 33554432;
-    }
-}
-
-function filterType(stack, type) {
-    return stack.filter(function (card) {
-        return cardIs(card, type);
-    });
-}
 
 /**
  * Filters non cards from a collection of possible cards.
@@ -119,20 +81,8 @@ function sortByIndex(first, second) {
     return first.index - second.index;
 }
 
-function fusionMonster(card, effect, FUSION_MATERIALS) {
-    card.FUSION_MATERIALS = FUSION_MATERIALS;
-    effect.SetType = 'EFFECT_TYPE_SINGLE';
-    effect.SetOperation = function fusionSummon(action) {
-        if (action.type === 'FUSION_SUMMONED') {
-            card.FUSION_SUMMONED = true;
-        }
-    };
-    return effect;
-}
 
 module.exports = {
-    filterType: filterType,
-    fusionMonster: fusionMonster,
     filterPlayer: filterPlayer,
     filterIsCard: filterIsCard,
     filterIndex: filterIndex,
