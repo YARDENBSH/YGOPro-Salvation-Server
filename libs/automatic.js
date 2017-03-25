@@ -211,13 +211,34 @@ function getNormalSummons(duel) {
             var validEffectList = card.effectList.some(function (effect) {
                 return effect.SetCode !== 'EFFECT_CANNOT_SUMMON';
             });
-            return validEffectList.length;
+            return (validEffectList.length && card.level < 5);
         });
     } else {
         return [];
     }
 
 }
+
+function getNormalSets(duel) {
+    if (!duel.normalSummonedThisTurn) {
+        var state = duel.getState(),
+            player = state.turnOfPlayer,
+            ownedCards = aux.filterPlayer(player),
+            inHand = aux.filterlocation(ownedCards, 'HAND'),
+            monsters = aux.filterType(inHand, 'MONSTER');
+
+        return inHand.filter(function (card) {
+            var validEffectList = card.effectList.some(function (effect) {
+                return effect.SetCode !== 'EFFECT_CANNOT_MSET';
+            });
+            return (validEffectList.length && card.level < 5);
+        });
+    } else {
+        return [];
+    }
+
+}
+
 /**
  * Generate action list for main phases.
  * @param   {Object} duel Engine instance
@@ -226,6 +247,7 @@ function getNormalSummons(duel) {
 function getMainPhaseActions(duel) {
     return {
         normalsummonable: getNormalSummons(duel),
+        cansetmonster: getNormalSets(duel),
         specialsummonable: duel.query.getGroup({
             specialsummonable: true
         }),
@@ -235,9 +257,7 @@ function getMainPhaseActions(duel) {
         canactivatespelltrap: duel.query.getGroup({
             canactivate: true
         }),
-        cansetmonster: duel.query.getGroup({
-            cansetmonster: true
-        }),
+
         cantributesummon: duel.query.getGroup({
             canTributeSummon: true
         }),
@@ -509,10 +529,29 @@ function doMainPhase2(duel, callback) {
 function doEndPhase(duel, callback) {
     var endPhaseActionQueue = duel.endPhaseActionQueue;
     duel.nextPhase(END_PHASE);
-    processActionQueue(endPhaseActionQueue, function () {
-        duel.nextTurn();
-        callback();
-    });
+
+    function checkCardCount() {
+        processActionQueue(endPhaseActionQueue, function () {
+            var state = duel.getState(),
+                hand = aux.filterlocation(aux.filterPlayer(duel.stack, state.turnOfPlayer), 'HAND');
+            if (hand.length > duel.maxHandSize) {
+                duel.question({
+                    'questiontype': 'select',
+                    options: hand
+                }, function (error, message) {
+                    // discard
+                    duel.setState(message, 'discard');
+                    checkCardCount();
+                });
+            } else {
+                duel.nextTurn();
+                callback();
+            }
+
+        });
+    }
+
+    checkCardCount();
     return;
 }
 
@@ -589,6 +628,8 @@ function generic() {
  */
 function init(duel, params) {
     var actionQueue = [];
+
+    duel.maxHandSize = 5;
 
     duel.stack.forEach(function (card) {
         try {
