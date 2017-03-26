@@ -428,41 +428,57 @@ function doDamageCalculation(duel, attackerID, defenderID, callback) {
             sendAttackerToGrave = false,
             sendDefenderToGrave = false;
 
-        // Actual damage calculation mathmatics
-        if (defendingCard.card === undefined) {
-            duel.changeLifepoints(defendingCard.player, (-1 * attackingCard.atk));
-        } else if (defendingCard.card.position === 'FaceUpDefense') {
-            if (attackingCard.card.atk > defendingCard.card.def) {
-                sendDefenderToGrave = true;
-                if (attackingCard.piercing) {
-                    duel.changeLifepoints(defendingCard.player, defendingCard.card.def - attackingCard.card.atk);
+
+
+        function calculate() {
+            // Actual damage calculation mathmatics
+            if (defendingCard.card === undefined) {
+                duel.changeLifepoints(defendingCard.player, (-1 * attackingCard.atk));
+            } else if (defendingCard.card.position === 'FaceUpDefense') {
+                if (attackingCard.card.atk > defendingCard.card.def) {
+                    sendDefenderToGrave = true;
+                    if (attackingCard.piercing) {
+                        duel.changeLifepoints(defendingCard.player, defendingCard.card.def - attackingCard.card.atk);
+                    }
+                } else if (attackingCard.card.atk < defendingCard.card.def) {
+                    duel.changeLifepoints(attackingCard.player, attackingCard.card.atk - defendingCard.card.atk);
                 }
-            } else if (attackingCard.card.atk < defendingCard.card.def) {
-                duel.changeLifepoints(attackingCard.player, attackingCard.card.atk - defendingCard.card.atk);
-            }
-        } else {
-            if (attackingCard.card.atk > defendingCard.card.atk) {
-                duel.changeLifepoints(defendingCard.player, defendingCard.card.atk - attackingCard.card.atk);
-                if (attackingCard.card.atk) {
-                    sendAttackerToGrave = true;
-                }
-            } else if ((attackingCard.card.atk < defendingCard.card.atk)) {
-                duel.changeLifepoints(defendingCard.player, attackingCard.card.atk - defendingCard.card.atk);
-                sendDefenderToGrave = true;
             } else {
-                sendAttackerToGrave = true;
-                sendDefenderToGrave = true;
+                if (attackingCard.card.atk > defendingCard.card.atk) {
+                    duel.changeLifepoints(defendingCard.player, defendingCard.card.atk - attackingCard.card.atk);
+                    if (attackingCard.card.atk) {
+                        sendAttackerToGrave = true;
+                    }
+                } else if ((attackingCard.card.atk < defendingCard.card.atk)) {
+                    duel.changeLifepoints(defendingCard.player, attackingCard.card.atk - defendingCard.card.atk);
+                    sendDefenderToGrave = true;
+                } else {
+                    sendAttackerToGrave = true;
+                    sendDefenderToGrave = true;
+                }
+            }
+
+
+            // Pick one of three outcomes for card movements and do them.
+            if (sendAttackerToGrave && !sendDefenderToGrave) {
+                duel.setState({}, afterDamageCalculation);
+            } else if (sendAttackerToGrave && sendDefenderToGrave) {
+                duel.setState({}, afterDamageCalculation);
+            } else if (!sendAttackerToGrave && !sendDefenderToGrave) {
+                duel.setState({}, afterDamageCalculation);
             }
         }
 
-
-        // Pick one of three outcomes for card movements and do them.
-        if (sendAttackerToGrave && !sendDefenderToGrave) {
-            duel.setState({}, afterDamageCalculation);
-        } else if (sendAttackerToGrave && sendDefenderToGrave) {
-            duel.setState({}, afterDamageCalculation);
-        } else if (!sendAttackerToGrave && !sendDefenderToGrave) {
-            duel.setState({}, afterDamageCalculation);
+        // flip defense position monsters face up and apply flip effect.
+        // then do damage calculation.
+        if (defendingCard.card.position === 'FaceDownDefense') {
+            duel.setState({}, function () {
+                processActionQueue(damageCalculationActionQueue, function () {
+                    calculate();
+                });
+            });
+        } else {
+            calculate();
         }
     });
 }
