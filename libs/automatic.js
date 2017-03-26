@@ -122,22 +122,6 @@ function processActionQueue(actionQueue, callback) {
     });
 }
 
-
-
-/**
- * Set the starting Lifepoints of a duel.
- * @param {object} duel Engine instance.
- * @param {number} lp   Number of Lifepoints to start with.
- */
-function setLP(duel, lp) {
-
-    // this needs to be reworked.
-    duel.lp.forEach(function (currentLP, index) {
-        duel.lp[index] = lp;
-    });
-}
-
-
 /**
  * Do the automatic processsing of the draw phase. Start by emptying the queue then doing base logic.
  * @param {Object}   duel              Engine instance.
@@ -637,15 +621,8 @@ function generic() {
     return undefined;
 }
 
-/**
- * Initiate the duel
- * @param {object} duel   Engine instance (ygojs-core.js)
- * @param {object} params Object with a bunch of info to use as start up info.
- */
-function init(duel, params) {
-    var actionQueue = [];
 
-    duel.maxHandSize = 5;
+function loadCardScripts(duel) {
 
     duel.stack.forEach(function (card) {
         try {
@@ -671,22 +648,18 @@ function init(duel, params) {
             };
         }
     });
+}
 
+/**
+ * Initiate the duel
+ * @param {object} duel   Engine instance (ygojs-core.js)
+ * @param {object} params Object with a bunch of info to use as start up info.
+ */
+function init(duel, params) {
+    var actionQueue = [];
 
-    // Set the starting Life Points
-    actionQueue.push({
-        command: setLP,
-        params: [params.lifePoints]
-    });
-
-    // Set the starting Player
-    actionQueue.push({
-        command: duel.setTurnPlayer,
-        params: [params.firstPlayer]
-    });
-
-
-
+    duel.maxHandSize = 5;
+    loadCardScripts(duel);
     setupTurn(duel, actionQueue);
 }
 module.exports = {
