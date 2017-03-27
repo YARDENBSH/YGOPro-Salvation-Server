@@ -3,6 +3,7 @@
 
 // Legendary Sword
 module.exports = {
+    id: 61854111,
     initial_effect: function initial_effect(card, duel, aux) {
 
         var equipEffect,

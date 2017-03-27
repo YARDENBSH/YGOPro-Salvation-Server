@@ -3,6 +3,7 @@
 
 // Flame Ghost
 module.exports = {
+    id: 58528964,
     initial_effect: function initial_effect(card, duel, aux) {
 
         var effect = {},

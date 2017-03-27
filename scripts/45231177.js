@@ -3,6 +3,7 @@
 
 // Flame Swordsman
 module.exports = {
+    id: 45231177,
     initial_effect: function initial_effect(card, duel, aux) {
 
         var effect = {},

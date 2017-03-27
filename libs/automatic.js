@@ -25,7 +25,11 @@ var waterfall = require('async-waterfall'),
 function getForEffects(duel, effectType) {
     return duel.stack.filter(function (card) {
         var validEffectList = card.effectList.some(function (effect) {
-            return effect.setType === effectType;
+            if (Array.isArray(effectType)) {
+                effect.setType.includes(effectType);
+            } else {
+                return effect.setType === effectType;
+            }
         });
         return validEffectList.length;
     });
@@ -40,7 +44,11 @@ function getForEffects(duel, effectType) {
 function getForEffects(duel, effectCategory) {
     return duel.stack.filter(function (card) {
         var validEffectList = card.effectList.some(function (effect) {
-            return effect.SetCategory === effectCategory;
+            if (Array.isArray(effectCategory)) {
+                effect.SetCategory.includes(effectCategory);
+            } else {
+                return effect.SetCategory === effectCategory;
+            }
         });
         return validEffectList.length;
     });
@@ -55,7 +63,11 @@ function getForEffects(duel, effectCategory) {
 function getForEffects(duel, effectCode) {
     return duel.stack.filter(function (card) {
         var validEffectList = card.effectList.some(function (effect) {
-            return effect.SetCode === effectCode;
+            if (Array.isArray(effectCode)) {
+                effect.SetCode.includes(effectCode);
+            } else {
+                return effect.SetCode === effectCode;
+            }
         });
         return validEffectList.length;
     });
@@ -70,7 +82,11 @@ function getForEffects(duel, effectCode) {
 function getForEffects(duel, effectProperty) {
     return duel.stack.filter(function (card) {
         var validEffectList = card.effectList.some(function (effect) {
-            return effect.SetProperty === effectProperty;
+            if (Array.isArray(effectType)) {
+                effect.SetProperty.includes(effectType);
+            } else {
+                return effect.SetProperty === effectType;
+            }
         });
         return validEffectList.length;
     });

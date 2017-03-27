@@ -3,6 +3,7 @@
 
 // Charubin the Fire Knight
 module.exports = {
+    id: 37421579,
     initial_effect: function initial_effect(card, duel, aux) {
 
         var effect = {},

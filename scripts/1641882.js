@@ -3,6 +3,7 @@
 
 // Fusionist
 module.exports = {
+    id: 1641882,
     initial_effect: function initial_effect(card, duel, aux) {
 
         var effect = {},

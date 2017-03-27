@@ -3,6 +3,7 @@
 
 // Darkfire Dragon
 module.exports = {
+    id: 17881964,
     initial_effect: function initial_effect(card, duel, aux) {
 
         var effect = {},
