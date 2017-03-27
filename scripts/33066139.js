@@ -24,7 +24,6 @@ module.exports = {
         }
 
         function filter() {
-            var opponent = (card.player) ? 1 : 0;
             return card.position === 'FaceDown' || aux.isTrap(card);
         }
 
