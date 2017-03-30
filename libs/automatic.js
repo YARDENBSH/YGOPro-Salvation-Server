@@ -4,6 +4,7 @@
 
 // review the following https://github.com/Fluorohydride/ygopro-core/blob/master/processor.cpp
 
+
 var DRAW_PHASE = 0,
     STANDBY_PHASE = 1,
     MAIN_PHASE_1 = 2,
@@ -11,9 +12,9 @@ var DRAW_PHASE = 0,
     MAIN_PHASE_2 = 4,
     END_PHASE = 5;
 
-var waterfall = require('async-waterfall'),
-    hotload = require('hotload'),
-    aux = hotload('../scripts/utilities');
+var waterfall = require('async-waterfall'), // Async flow control
+    hotload = require('hotload'), // Allows for cards to be live edited
+    aux = hotload('../scripts/utilities'); // Tools that are exposed to help manipulate the duel instance
 
 
 /**
@@ -82,10 +83,10 @@ function getForEffects(duel, effectCode) {
 function getForEffects(duel, effectProperty) {
     return duel.stack.filter(function (card) {
         var validEffectList = card.effectList.some(function (effect) {
-            if (Array.isArray(effectType)) {
-                effect.SetProperty.includes(effectType);
+            if (Array.isArray(effectProperty)) {
+                effect.SetProperty.includes(effectProperty);
             } else {
-                return effect.SetProperty === effectType;
+                return effect.SetProperty === effectProperty;
             }
         });
         return validEffectList.length;
@@ -112,7 +113,7 @@ function getForEffects(duel, effectProperty) {
  * Process a queue of actions (as defined by above Action Object).
  * @param {Array} actionQueue Array of action objects. Each contains a command and parameters.
  */
-function processActionQueue(actionQueue, callback) {
+function processQueue(actionQueue, callback) {
 
     // waterfall takes a list of functions, we need to generate those functions.
     waterfall(actionQueue.map(function (action) {
@@ -155,7 +156,7 @@ function doDrawPhase(duel, callback) {
     duel.nextPhase(DRAW_PHASE);
 
     // Do any "on start of phase", actions first, then attempt to draw.
-    processActionQueue(drawPhaseActionQueue, function () {
+    processQueue(drawPhaseActionQueue, function () {
         var state = duel.state(),
             player = state.turnOfPlayer,
             turnCount = state.turnCount;
@@ -163,15 +164,16 @@ function doDrawPhase(duel, callback) {
         if (turnCount && !state.skipDraw) {
 
             /* duel engine moves the card, then triggers its effects
-               when its done it moves on. That is why the callback is passed. */
+               when its done it moves on. That is why the callback is passed. 
+               By the way this is the part where you actually draw. */
 
             duel.drawCard(player, 1, duel.playerName[player], function () {
 
                 /* drawing a card may have added an action to the phase stack so do it again */
-                processActionQueue(drawPhaseActionQueue, callback);
+                processQueue(drawPhaseActionQueue, callback);
             });
         } else {
-            processActionQueue(drawPhaseActionQueue, callback);
+            processQueue(drawPhaseActionQueue, callback);
         }
     });
     return;
@@ -193,7 +195,7 @@ function doStandbyPhase(duel, callback) {
 
 
     duel.nextPhase(DRAW_PHASE);
-    processActionQueue(standbyPhaseActionQueue, function () {
+    processQueue(standbyPhaseActionQueue, function () {
         callback();
     });
     return;
@@ -219,6 +221,11 @@ function getNormalSummons(duel) {
 
 }
 
+/**
+ * Get a list of cards that the active user can normal summon at the moment.
+ * @param   {object} duel Engine Instance
+ * @returns {Array}  List of Cards
+ */
 function getNormalSets(duel) {
     if (!duel.normalSummonedThisTurn) {
         var state = duel.getState(),
@@ -275,8 +282,8 @@ function getMainPhaseActions(duel) {
 
 /**
  * Do the automatic processsing of the main phase 1.
- * @param {Object}   duel                      Engine instance
- * @param {Function} callback                  Function to call to move onto next phase.
+ * @param {Object}   duel        Engine instance
+ * @param {Function} callback    Function to call to move onto next phase.
  */
 function doMainPhase1(duel, callback) {
     var mainPhase1ActionQueue = duel.mainPhase1ActionQueue;
@@ -284,7 +291,7 @@ function doMainPhase1(duel, callback) {
     duel.nextPhase(MAIN_PHASE_1);
 
     function askUserNextAction() {
-        processActionQueue(mainPhase1ActionQueue, function () {
+        processQueue(mainPhase1ActionQueue, function () {
             var state = duel.state(),
                 player = state.turnOfPlayer,
                 turnCount = state.turnCount,
@@ -357,7 +364,7 @@ function doBattlePhase(duel, callback) {
     duel.nextPhase(BATTLE_PHASE);
 
     function askUserNextAction() {
-        processActionQueue(battlePhaseActionQueue, function () {
+        processQueue(battlePhaseActionQueue, function () {
             var state = duel.state(),
                 player = state.turnOfPlayer,
                 turnCount = state.turnCount,
@@ -411,16 +418,16 @@ function doDamageCalculation(duel, attackerID, defenderID, callback) {
     function afterDamageCalculation() {
 
         // Process any cards that where moved effects after damage calculation.
-        processActionQueue(damageCalculationActionQueue, function () {
+        processQueue(damageCalculationActionQueue, function () {
 
             // leave damage calculation and then give cards a chance to respond.
             duel.leaveDamageCalculation();
-            processActionQueue(damageCalculationActionQueue, callback);
+            processQueue(damageCalculationActionQueue, callback);
         });
     }
 
     // do any events at the start of damage calculation to change attack values
-    processActionQueue(damageCalculationActionQueue, function () {
+    processQueue(damageCalculationActionQueue, function () {
 
         // This doesnt return the card but a modified version of the card for easy math.
         var attackingCard = duel.getDamageCalculationCard(attackerID),
@@ -473,7 +480,7 @@ function doDamageCalculation(duel, attackerID, defenderID, callback) {
         // then do damage calculation.
         if (defendingCard.card.position === 'FaceDownDefense') {
             duel.setState({}, function () {
-                processActionQueue(damageCalculationActionQueue, function () {
+                processQueue(damageCalculationActionQueue, function () {
                     calculate();
                 });
             });
@@ -501,7 +508,7 @@ function doMainPhase2(duel, callback) {
     duel.nextPhase(MAIN_PHASE_2);
 
     function askUserNextAction() {
-        processActionQueue(mainPhase2ActionQueue, function () {
+        processQueue(mainPhase2ActionQueue, function () {
             var state = duel.state(),
                 player = state.turnOfPlayer,
                 turnCount = state.turnCount,
@@ -547,7 +554,7 @@ function doEndPhase(duel, callback) {
     duel.nextPhase(END_PHASE);
 
     function checkCardCount() {
-        processActionQueue(endPhaseActionQueue, function () {
+        processQueue(endPhaseActionQueue, function () {
             var state = duel.getState(),
                 hand = aux.filterlocation(aux.filterPlayer(duel.stack, state.turnOfPlayer), 'HAND');
             if (hand.length > duel.maxHandSize) {
@@ -627,7 +634,7 @@ function setupTurn(duel) {
         params: [duel]
     });
 
-    processActionQueue(actionQueue, function () {
+    processQueue(actionQueue, function () {
         setTimeout(setupTurn);
     });
 }
@@ -637,7 +644,10 @@ function generic() {
     return undefined;
 }
 
-
+/**
+ * Initialize all the cards in a duel.
+ * @param {object} duel Engine Instance 
+ */
 function loadCardScripts(duel) {
 
     duel.stack.forEach(function (card) {
