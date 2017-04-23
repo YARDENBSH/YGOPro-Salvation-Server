@@ -1,10 +1,16 @@
 /*jslint node:true, bitwise : true, nomen:true*/
 'use strict';
 
+<<<<<<< HEAD
 var fs = require('fs'),
     makeCard = require('./makeCard.js'),
     query = require('../scripts/utilities');
 
+=======
+var fs = require('fs'), // file system access
+    EventEmitter = require('events'), // a way to "notice" things occuring
+    uniqueIdenifier = require('uuid/v1'); // time based unique identifier, RFC4122 version 1
+>>>>>>> refs/remotes/origin/master
 
 
 
@@ -104,8 +110,14 @@ function init(callback) {
     if (typeof callback !== 'function') {
         callback = function (view, internalState) {};
     }
+<<<<<<< HEAD
     var stack = [],
         db = [],
+=======
+
+    var answerListener = new EventEmitter(),
+        stack = [],
+>>>>>>> refs/remotes/origin/master
         previousStack = [],
         outstack = [],
         names = ['', ''],
@@ -858,6 +870,7 @@ function init(callback) {
             state.duelistChat.push('<pre>Mill Cards:  /mill [amount]</pre>');
             state.duelistChat.push('<pre>Reduce LP:   /sub [amount]</pre>');
             state.duelistChat.push('<pre>Increase LP: /add [amount]</pre>');
+            state.duelistChat.push('<pre>RPS:         /rps</pre>');
             state.duelistChat.push('<pre>Flip Coin:   /flip</pre>');
             state.duelistChat.push('<pre>Roll Dice:   /roll</pre>');
             state.duelistChat.push('<pre>Make Token:  /token</pre>');
@@ -1039,6 +1052,139 @@ function init(callback) {
         duelistChat('Server', username + ' surrendered.');
     }
 
+    function question(player, type, options, answerLength, onAnswerFromUser) {
+        var uuid = uniqueIdenifier(),
+            output = {
+                names: names,
+                0: {},
+                1: {},
+                spectators: {}
+            };
+
+
+        output[player] = {
+            action: 'question',
+            type: type,
+            options: options,
+            answerLength: answerLength,
+            uuid: uuid
+        };
+        console.log('sending question', output);
+        answerListener.once(uuid, onAnswerFromUser);
+        callback(output, stack);
+    }
+
+    function rps(resolver) {
+        var player1,
+            player2,
+            previous1,
+            previous2,
+            cardMap = {
+                0: 'rock',
+                1: 'paper',
+                2: 'scissors'
+            };
+
+        console.log('starting rps');
+
+        function determineResult(player, answer) {
+            console.log('determining', player, answer);
+            if (player === 0) {
+                player1 = answer;
+            }
+            if (player === 1) {
+                player2 = answer;
+            }
+            if (player1 === undefined || player2 === undefined) {
+                return undefined;
+            }
+            previous1 = player1;
+            previous2 = player2;
+            if (player1 === player2) {
+                player1 = undefined;
+                player2 = undefined;
+                return false;
+            }
+            return ((3 + player1 - player2) % 3) - 1; // returns 0 or 1, the winner;
+        }
+
+        function notify(reAsk) {
+            revealCallback([{
+                id: cardMap[previous1],
+                value: previous1,
+                note: 'specialCards'
+            }, {
+                id: 'vs',
+                note: 'specialCards'
+            }, {
+                id: cardMap[previous2],
+                value: previous2,
+                note: 'specialCards'
+            }], 0, callback);
+            revealCallback([{
+                id: cardMap[previous1],
+                value: previous1,
+                note: 'specialCards'
+            }, {
+                id: 'vs',
+                note: 'specialCards'
+            }, {
+                id: cardMap[previous2],
+                value: previous2,
+                note: 'specialCards'
+            }], 1, callback);
+            if (reAsk) {
+                setTimeout(reAsk, 2500);
+            }
+        }
+
+
+        function ask() {
+            var time = (previous1 !== undefined) ? 3000 : 0;
+
+            question(0, 'specialCards', [{
+                id: 'rock',
+                value: 0
+            }, {
+                id: 'paper',
+                value: 1
+            }, {
+                id: 'scissors',
+                value: 2
+            }], 1, function (answer) {
+                console.log('question', answer);
+                var result = determineResult(0, answer[0]);
+                if (result === false) {
+                    notify(ask);
+                    return;
+                }
+                if (result !== undefined) {
+                    notify(resolver(result));
+                }
+            });
+            question(1, 'specialCards', [{
+                id: 'rock',
+                value: 0
+            }, {
+                id: 'paper',
+                value: 1
+            }, {
+                id: 'scissors',
+                value: 2
+            }], 1, function (answer) {
+                var result = determineResult(1, answer[0]);
+                if (result === false) {
+                    notify(ask);
+                    return;
+                }
+                if (result !== undefined) {
+                    notify(resolver(result));
+                }
+            });
+        }
+        ask();
+    }
+
     //expose public functions.
     return {
         actionQueue: [],
@@ -1099,7 +1245,9 @@ function init(callback) {
         sideAccept: 0,
         setNames: setNames,
         getStack: getStack,
-        setTurnPlayer: setTurnPlayer
+        setTurnPlayer: setTurnPlayer,
+        answerListener: answerListener,
+        rps: rps
     };
 
 

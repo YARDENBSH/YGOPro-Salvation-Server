@@ -1,18 +1,33 @@
 /*jslint node:true, plusplus:true, bitwise : true, nomen:true*/
 'use strict';
 
+
+/**
+ * Update the banlist
+ */
+
+
+var fs = require('fs');
+
+function getBanlist() {
+    var banlist = {},
+        files = fs.readdirSync('../http/banlist/');
+    files.forEach(function (filename) {
+        if (filename.indexOf('.js') > -1) {
+            var listname = filename.slice(0, -3);
+            banlist[listname] = require('../http/banlist/' + '/' + filename);
+        }
+    });
+    return banlist;
+}
+
 var validateDeck = require('./validate-Deck'),
     http = require('http'),
     https = require('https'),
     path = require('path'),
     database = require('../http/manifest/manifest_0-en-OCGTCG.json'),
-    banlist = require('../http/manifest/banlist.json'),
-    fs = require('fs'),
-    banLists = {};
+    banlist = getBanlist();
 
-/**
- * Update the banlist
- */
 
 module.exports = function (wss) {
 
@@ -35,7 +50,6 @@ module.exports = function (wss) {
      */
     function newGame(settings) {
         console.log('settings', settings);
-
         return {
             roompass: settings.roompass,
             started: false,
@@ -84,7 +98,7 @@ module.exports = function (wss) {
          * @param {object}   view  view definition set
          * @param {Array} stack of cards
          */
-        function gameResponse(view, stack) {
+        function gameResponse(view, stack, callback) {
             if (stateSystem[game] === undefined) {
                 return;
             }
@@ -106,6 +120,9 @@ module.exports = function (wss) {
                         spectator.send(JSON.stringify(view.spectators));
                     });
                 }
+            }
+            if (callback) {
+                callback();
             }
         }
         return gameResponse;
@@ -316,7 +333,7 @@ module.exports = function (wss) {
                 break;
             }
             if (socket.slot !== undefined) {
-                message.validate = validateDeck(message.deck, banlist[games[activeduel].banlist], database, games[activeduel].cardpool);
+                message.validate = validateDeck(message.deck, banlist[games[activeduel].banlist], database, games[activeduel].cardpool, games[activeduel].prerelease);
                 try {
                     if (message.validate) {
                         if (message.validate.error) {
@@ -564,11 +581,27 @@ module.exports = function (wss) {
             }
             stateSystem[activeduel].revealCallback([message.card], socket.slot, 'revealHandSingle');
             break;
+        case "rps":
+            if (socket.slot === undefined) {
+                break;
+            }
+            stateSystem[activeduel].rps(function (result) {
+                var winner = 'Player ' + (1 + result);
+                stateSystem[activeduel].duelistChat('Server', games[activeduel].player[socket.slot].name + ' ' + winner + ' won.');
+            });
+            break;
         case "reveal":
             if (socket.slot === undefined) {
                 break;
             }
             stateSystem[activeduel].revealCallback(stateSystem[activeduel].findUIDCollection(message.card.uid), socket.slot, 'revealHandSingle');
+            break;
+        case "question":
+            console.log('got question', message);
+            if (socket.slot === undefined) {
+                break;
+            }
+            stateSystem[activeduel].answerListener.emit(message.uuid, message.answer);
             break;
         case "getLog":
             if (socket.slot === undefined) {
