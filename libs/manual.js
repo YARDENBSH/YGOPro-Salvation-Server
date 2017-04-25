@@ -96,7 +96,7 @@ module.exports = function (wss) {
          * @param {object}   view  view definition set
          * @param {Array} stack of cards
          */
-        function gameResponse(view, stack) {
+        function gameResponse(view, stack, callback) {
             if (stateSystem[game] === undefined) {
                 return;
             }
@@ -118,6 +118,9 @@ module.exports = function (wss) {
                         spectator.send(JSON.stringify(view.spectators));
                     });
                 }
+            }
+            if (callback) {
+                callback();
             }
         }
         return gameResponse;
@@ -576,11 +579,27 @@ module.exports = function (wss) {
             }
             stateSystem[activeduel].revealCallback([message.card], socket.slot, 'revealHandSingle');
             break;
+        case "rps":
+            if (socket.slot === undefined) {
+                break;
+            }
+            stateSystem[activeduel].rps(function (result) {
+                var winner = 'Player ' + (1 + result);
+                stateSystem[activeduel].duelistChat('Server', games[activeduel].player[socket.slot].name + ' ' + winner + ' won.');
+            });
+            break;
         case "reveal":
             if (socket.slot === undefined) {
                 break;
             }
             stateSystem[activeduel].revealCallback(stateSystem[activeduel].findUIDCollection(message.card.uid), socket.slot, 'revealHandSingle');
+            break;
+        case "question":
+            console.log('got question', message);
+            if (socket.slot === undefined) {
+                break;
+            }
+            stateSystem[activeduel].answerListener.emit(message.uuid, message.answer);
             break;
         case "getLog":
             if (socket.slot === undefined) {

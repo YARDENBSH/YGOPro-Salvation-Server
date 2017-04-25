@@ -2,7 +2,37 @@
 // Gamelist object acts similar to a Redis server, could be replaced with on but its the gamelist state.
 'use strict';
 
-var child_process = require('child_process'),
+
+
+var child_process = require('child_process');
+var hotload = require("hotload");
+var cardidmap = hotload("../http/cardidmap.js");
+
+
+
+/**
+ * Maps a deck to updated IDs.
+ * @param   {[[Type]]} deck [[Description]]
+ * @returns {object}   [[Description]]
+ */
+function mapCards(deck) {
+    // [].map returns a new array so we are just gonna send it back, not store it as a var.
+    return deck.map(function (cardInDeck) {
+        // if there is an entry in the cardidmap for that card id, we change it to the new value
+        // and return a completely new object.
+        if (cardidmap[cardInDeck.id]) {
+            return {
+                id: cardidmap[cardInDeck.id]
+            };
+        } else {
+            // else we just return out the old card object
+            return cardInDeck;
+        }
+    });
+}
+
+var express = require('express'),
+    child_process = require('child_process'),
     express = require('express'),
     fs = require('fs'),
     spdy = require('spdy'),
@@ -58,7 +88,7 @@ var primus,
     forumValidate = require('./forum-validator.js'),
     currentGlobalMessage = '',
     adminlist = require('../package.json').admins,
-    banlist = require('./bansystem.js'),
+    banlistedUsers = require('./bansystem.js'),
     chatbox = [],
     sayCount = 0;
 
@@ -224,11 +254,11 @@ function registrationCall(data, socket) {
                 info: info,
                 chatbox: chatbox
             });
-            Object.keys(banlist).some(function (bannedUser) {
+            Object.keys(banlistedUsers).some(function (bannedUser) {
                 if (bannedUser.toUpperCase() === data.username.toUpperCase()) {
                     socket.write({
                         clientEvent: 'banned',
-                        reason: banlist[data.username]
+                        reason: banlistedUsers[data.username]
                     });
                     return true;
                 }
@@ -553,6 +583,11 @@ function onData(data, socket) {
         break;
     case 'save':
         delete data.action;
+        data.decks.forEach(function (deck, i) { //cycles through the decks
+            data.decks[i].main = mapCards(data.decks[i].main); //This cannot be simplified 
+            data.decks[i].side = mapCards(data.decks[i].side); //further due to the abstract
+            data.decks[i].extra = mapCards(data.decks[i].extra); //of data.decks, afaik
+        }); //unsure if loop should run through all decks for a single save; might be resource intensive
         deckStorage.update({
             username: data.username
         }, data, {
@@ -568,6 +603,13 @@ function onData(data, socket) {
         break;
     case 'load':
         console.log(data);
+        if (data.decks) { //if it doesn't exist [].length will scream at you
+            data.decks.forEach(function (deck, i) {
+                data.decks[i].main = mapCards(data.decks[i].main);
+                data.decks[i].side = mapCards(data.decks[i].side);
+                data.decks[i].extra = mapCards(data.decks[i].extra);
+            });
+        }
         deckStorage.find({
             username: data.username
         }, function (error, docs) {
