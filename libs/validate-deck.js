@@ -234,7 +234,7 @@ function validateDeck(deck, banlist, database, cardpool, prerelease) {
             var reference = getFilteredCardById(card),
                 subreference = getCardById(card);
             console.log(reference.name, subreference.tcg.date, new Date(banlist.endDate));
-            if (reference.tcg.date || (reference && cardpool == 'OCG/TCG')) {
+            if (reference.tcg.date || (reference && cardpool == 'OCG/TCG' && today_date > new Date(banlist.endDate))) {
                 if (reference.tcg.date > new Date(banlist.endDate)) {
                     console.log(card)
                     validate.error = true;
@@ -252,7 +252,7 @@ function validateDeck(deck, banlist, database, cardpool, prerelease) {
             var reference = getFilteredCardById(card),
                 subreference = getCardById(card);
             console.log(reference.name, subreference.tcg.date, new Date(banlist.endDate));
-            if (reference.tcg.date || (reference && cardpool == 'OCG/TCG')) {
+            if (reference.tcg.date || (reference && cardpool == 'OCG/TCG' && today_date > new Date(banlist.endDate))) {
                 if (reference.tcg.date > new Date(banlist.endDate)) {
                     console.log(card)
                     validate.error = true;
@@ -270,7 +270,7 @@ function validateDeck(deck, banlist, database, cardpool, prerelease) {
             var reference = getFilteredCardById(card),
                 subreference = getCardById(card);
             console.log(reference.name, subreference.tcg.date, new Date(banlist.endDate));
-            if (reference.tcg.date || (reference && cardpool == 'OCG/TCG')) {
+            if (reference.tcg.date || (reference && cardpool == 'OCG/TCG' && today_date > new Date(banlist.endDate))) {
                 if (reference.tcg.date > new Date(banlist.endDate)) {
                     console.log(card)
                     validate.error = true;
