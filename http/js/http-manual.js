@@ -2455,7 +2455,7 @@ function revealonclick(card, note) {
     }
 
     if (manualActionReference.location === 'GRAVE') {
-        $('.v-grave').not('.non-extra').css({
+        $('.v-grave').css({
             'display': 'block'
         });
         if (pendulumMap[dbEntry.type]) {
@@ -2489,10 +2489,6 @@ function revealonclick(card, note) {
         }
         if (cardIs('fusion', dbEntry) || cardIs('synchro', dbEntry) || cardIs('xyz', dbEntry) || cardIs('link', dbEntry)) {
             $('.v-monster-extra').css({
-                'display': 'block'
-            });
-        } else {
-            $('.non-extra').css({
                 'display': 'block'
             });
         }
@@ -2542,7 +2538,7 @@ function revealonclick(card, note) {
         return;
     }
     if (manualActionReference.location === "REMOVED") {
-        $('.v-removed').not('.non-extra').css({
+        $('.v-removed').css({
             'display': 'block'
         });
         if (pendulumMap[dbEntry.type]) {
@@ -2583,16 +2579,12 @@ function revealonclick(card, note) {
             $('.v-monster-extra').css({
                 'display': 'block'
             });
-        } else {
-            $('.non-extra').css({
-                'display': 'block'
-            });
         }
         reorientmenu();
         return;
     }
     if (manualActionReference.location === 'EXTRA') {
-        $('.v-extra').not('.non-link').css({
+        $('.v-extra').css({
             'display': 'block'
         });
         if (cardIs('xyz', dbEntry)) {
@@ -2610,14 +2602,6 @@ function revealonclick(card, note) {
             });
 
         }
-        if (!(cardIs('link', dbEntry))) {
-            $('.non-link').css({
-                'display': 'block'
-            });
-        }
-        $('.non-extra').css({
-            'display': 'none'
-        });
 
 
         reorientmenu();
@@ -2949,7 +2933,7 @@ function guicardonclick() {
             return;
         }
         if (stackunit.location === 'MONSTERZONE') {
-            $('.m-monster, .m-field').not('.non-link, .non-extra').css({
+            $('.m-monster, .m-field').css({
                 'display': 'block'
             });
             if ($("#phaseindicator").attr('data-currentphase') === '3') {
@@ -2961,10 +2945,13 @@ function guicardonclick() {
                 $('.m-monster-extra').css({
                     'display': 'block'
                 });
+                $('.disabled-for-extra').css({
+                    'display': 'none'
+                });
             }
-            if (!(cardIs('fusion', dbEntry) || cardIs('synchro', dbEntry) || cardIs('xyz', dbEntry) || cardIs('link', dbEntry))) {
-                $('.non-extra').css({
-                    'display': 'block'
+            if (cardIs('link', dbEntry)) {
+                $('.disable-for-link').css({
+                    'display': 'none'
                 });
             }
 
