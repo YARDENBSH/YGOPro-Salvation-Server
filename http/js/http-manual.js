@@ -209,6 +209,9 @@ function cardIs(cat, obj) {
     if (cat === "synchro") {
         return (obj.type & 8192) === 8192;
     }
+    if (cat === "token") {
+        return (obj.type & 16400) === 16400;
+    }
     if (cat === "xyz") {
         return (obj.type & 8388608) === 8388608;
     }
@@ -1877,13 +1880,22 @@ function manualToDefence() {
     manualServer.send(JSON.stringify(message));
 }
 
-
-
 function manualToFaceDownDefence() {
     'use strict';
 
     var index = manualActionReference.index,
         end = setMonster(manualActionReference, index),
+        message = makeCardMovement(manualActionReference, end);
+
+    message.action = 'moveCard';
+    manualServer.send(JSON.stringify(message));
+}
+
+function manualToFaceUpDefence() {
+    'use strict';
+
+    var index = manualActionReference.index,
+        end = defenceMonster(manualActionReference, index),
         message = makeCardMovement(manualActionReference, end);
 
     message.action = 'moveCard';
@@ -2196,8 +2208,8 @@ function manualToRemovedFacedown() {
     var index = $('#automationduelfield .p' + orient(manualActionReference.player) + '.REMOVED').length,
         end = makeRemoved(manualActionReference, index),
         message = makeCardMovement(manualActionReference, end);
-    message.position = 'FaceDown';
     message.action = 'moveCard';
+    message.moveposition = 'FaceDown';
     manualServer.send(JSON.stringify(message));
 }
 
@@ -2370,7 +2382,7 @@ function sideonclick(index, zone) {
         });
     }
     if (sideReference.zone === 'side') {
-        if (cardIs('xyz', dbEntry) || cardIs('fusion', dbEntry) || cardIs('synchro', dbEntry)) {
+        if (cardIs('xyz', dbEntry) || cardIs('fusion', dbEntry) || cardIs('synchro', dbEntry) || cardIs('link', dbEntry)) {
             $('.s-toextra').css({
                 'display': 'block'
             });
@@ -2588,6 +2600,10 @@ function revealonclick(card, note) {
                 'display': 'block'
             });
         }
+        $('.non-banished').css({
+            'display': 'none'
+        });
+
         reorientmenu();
         return;
     }
@@ -2995,12 +3011,22 @@ function guicardonclick() {
                 });
             }
             if (stackunit.position === 'FaceUpAttack') {
-                $('#toAttack').css({
+                $('#toAttack, #flipUpMonster').css({
+                    'display': 'none'
+                });
+            }
+            if (cardIs('link', dbEntry)) {
+                $('#toDefence, #flipUpMonster, #flipDownMonster, #flipDown').css({
+                    'display': 'none'
+                });
+            }
+            if (!excludeTokens(dbEntry)) {
+                $('#bottomdeck', '#topdeck', '#opphand', '#banishcard', '#tograve', '#tohand', '#overlayStack', '#flipDownMonster').css({
                     'display': 'none'
                 });
             }
             if (stackunit.position === 'FaceUpDefence') {
-                $('#toDefence, .countercontroller').css({
+                $('#toDefence, #flipUpMonster, .countercontroller').css({
                     'display': 'none'
                 });
             }
@@ -3010,7 +3036,7 @@ function guicardonclick() {
                 });
             }
             if (stackunit.position === 'FaceDownDefence') {
-                $('#toDefence, #flipDown, #signalEffect, .countercontroller').css({
+                $('#toDefence, #flipDown, #signalEffect, #flipDownMonster, #overlayStack, .countercontroller').css({
                     'display': 'none'
                 });
             }
@@ -3413,7 +3439,28 @@ $('#lobbychatinput, #sidechatinput, #spectatorchatinput').keypress(function (e) 
                 $(e.currentTarget).val('');
                 return;
             }
-
+            if (parts[0] === '/banish') {
+                amount = parseInt(parts[1], 10);
+                if (isNaN(amount)) {
+                    return;
+                }
+                for (i = 0; i < amount; i++) {
+                    manualMillRemovedCard();
+                }
+                $(e.currentTarget).val('');
+                return;
+            }
+            if (parts[0] === '/banishfd') {
+                amount = parseInt(parts[1], 10);
+                if (isNaN(amount)) {
+                    return;
+                }
+                for (i = 0; i < amount; i++) {
+                    manualMillRemovedCardFaceDown();
+                }
+                $(e.currentTarget).val('');
+                return;
+            }
         }
         manualServer.send(JSON.stringify({
             action: 'chat',
